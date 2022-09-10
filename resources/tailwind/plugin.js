@@ -1,6 +1,12 @@
 const plugin = require('tailwindcss/plugin')
 const colors = require('tailwindcss/colors')
 const defaultTheme = require('tailwindcss/defaultTheme')
+const svgToDataUri = require('mini-svg-data-uri')
+
+const [baseFontSize, { lineHeight: baseLineHeight }] = defaultTheme.fontSize.base
+const { spacing, borderWidth, borderRadius } = defaultTheme
+
+const addForms = require('./forms')
 
 function addButtonVariant(theme, color, defaultColor) {
   return {
@@ -22,7 +28,11 @@ function addButtonVariant(theme, color, defaultColor) {
   }
 }
 
-module.exports = plugin(function({ addUtilities, addComponents, theme, config }) {
+module.exports = plugin(function({ addUtilities, addBase, addComponents, theme, config }) {
+  // Forms
+  addForms(addBase, addComponents, theme)
+
+  // Buttons
   addComponents({
     '.btn': {
       fontSize: theme('fontSize.sm', defaultTheme.fontSize.sm),
