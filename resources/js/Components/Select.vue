@@ -1,7 +1,7 @@
 <template>
   <Listbox :multiple="multiple" :by="by" class="w-full" :class="$attrs.class" as="div" v-model="selectedValue" :name="name" v-slot="{ open }">
-    <div class="relative w-full">
-      <ListboxButton class="w-full relative text-left border bg-white ring-transparent ring-4 text-sm focus:outline-none" :class="[ open ? 'border-b-transparent rounded-t-lg' : 'rounded-lg', hasError ? 'border-danger-300 focus:border-danger-300 focus:ring-danger-100' : 'border-gray-300 focus:border-primary-300 focus:ring-primary-100' ]">
+    <div class="relative w-full select" :class="{ 'open': open }">
+      <ListboxButton class="w-full relative text-left select-button" :class="{ 'open': open, 'has-error': hasError }">
         <slot name="button" v-bind="{ clear, showClearButton: nullable && isSelected, label, open, value: selectedValue }">
           <SelectButton @clear="clear" :show-clear-button="nullable && isSelected" :label="label" />
         </slot>
@@ -15,10 +15,16 @@
               </svg>
             </button>
           </div>
+          <p v-if="maxLimitEnabled && maximumSelected" class="px-2 text-warning-700 text-xs inline-flex items-center font-medium mb-2 -mt-1">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1">
+              <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+            </svg>
+            {{ maxOptionsSelectedLabel }}
+          </p>
         </slot>
       </ListboxButton>
       <Transition enter-from-class="opacity-0" enter-to-class="opacity-100" enter-active-class="transition-opacity duration-150" leave-active-class="transition-opacity duration-150" leave-from-class="opacity-100" leave-to-class="opacity-0">
-        <ListboxOptions class="w-full focus:outline-none shadow-lg bg-white z-10 absolute max-h-60 overflow-x-hidden overflow-y-auto w-full border rounded-b-lg -mt-0.5" :class="[ hasError ? 'border-danger-300' : 'border-gray-300' ]">
+        <ListboxOptions class="w-full focus:outline-none shadow-lg bg-white z-10 absolute max-h-60 overflow-x-hidden overflow-y-auto w-full border rounded-b-lg -mt-0.5 select-option-list" :class="[ hasError ? 'border-danger-300' : 'border-gray-300' ]">
           <div v-if="searchable" class="w-full pl-2 pr-3 py-2 relative border-b border-gray-300 w-full">
             <div class="pointer-events-none absolute top-0 pl-4 bottom-0 left-0 flex items-center">
               <svg class="w-4 h-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -30,7 +36,7 @@
           </div>
 
           <template v-if="filteredOptions.length > 0">
-            <ListboxOption v-for="option in filteredOptions" :key="option[by]" :value="option" as="template" v-slot="{ active, selected }">
+            <ListboxOption v-for="option in filteredOptions" :key="option[by]" :value="option" as="template" v-slot="{ active, selected }" :disabled="maximumSelected && !isOptionSelected(option)">
               <slot name="option" v-bind="{ active, selected, option, labelBy }">
                 <SelectOption :show-icon="showOptionIcon" :active="active" :selected="selected" :option="option" :label-by="labelBy" />
               </slot>
@@ -102,19 +108,34 @@ const props = withDefaults(defineProps<{
   searchPlaceholder?: string
   searchable?: boolean
   searchableBy?: string
+  maxOptionsSelectedLabel?: string
+  max?: number
 }>(), {
   by: 'value',
   labelBy: 'label',
   multiple: false,
   nullable: false,
   noSelectionLabel: 'Select value…',
-  showOptionIcon: true,
+  showOptionIcon: false,
   noOptionsLabel: 'No options available.',
   noResultsFoundLabel: 'No results found.',
   searchPlaceholder: 'Search…',
   searchable: false,
-  searchableBy: 'label'
+  searchableBy: 'label',
+  max: -1,
+  maxOptionsSelectedLabel: 'Maximum options selected.'
 })
+
+const maxLimitEnabled = computed(() => props.multiple && props.max > 0)
+const maximumSelected = computed(() => maxLimitEnabled.value && (selectedValue.value as Array<Option>).length >= props.max)
+
+const isOptionSelected = (option: Option) => {
+  if (props.multiple) {
+    return !!(selectedValue.value as Array<Option>).find(it => resolveIdentifier(option) == resolveIdentifier(it))
+  }
+
+  return resolveIdentifier(option) == resolveIdentifier(selectedValue.value)
+}
 
 const hasError = computed(() => !!props.error)
 const isMultiple = computed(() => !!props.multiple)
